@@ -5,29 +5,38 @@ use warnings;
 package IRISA::Interface;
 
 use Carp qw/croak carp/;
+use Scalar::Util;
 
-my %arg_registry;
+my %arg_registry = ('' => {});
 my %msg_registry;
+
+my @types = qw/Int Bool Date String Buffer Real Char IntTable BufferTable ArgTable/;
+my %types;
+{
+    foreach (@types) {
+        my $t = "IRISA::Arg::$_";
+        $types{$_} = $t;
+        $types{uc($_)} = $t;
+    }
+}
+
+
 
 sub name
 {
     my ($pkg, $file, $line) = caller;
-	*{$pkg.'::name'} = $_[0];
+    ${$pkg.'::name'} = $_[0];
 }
 
 
 sub arg
 {
-    my ($pkg, $file, $line) = caller;
-	my $int = *{$pkg.'::name'}; # Interface name
-    my ($class, $name, $type, $id) = @_;
+    my ($class, $intf, $name, $type, $id) = @_;
     $type = $types{$type};
     my $info = [ $name, $id, $type ];
-    $arg_registry{$int}{$name} = $info;
-	$arg_registry{$id} = $info;
-    return unless $int;
-    $arg_registry{$int} = { } unless exists $arg_registry{$int};
-    $arg_registry{$int}{$name} = $info;
+    $arg_registry{$intf} = { } unless exists $arg_registry{$intf};
+    $arg_registry{$intf}{$name} = $info;
+    $arg_registry{$id} = $info;  # TODO handle conflicts
     return;
 }
 
@@ -63,5 +72,9 @@ sub arg_info
     return wantarray ? ($id, $data) : [ $id, $data ];
 }
 
+sub message
+{
+    
+}
 
 1;
