@@ -10,8 +10,8 @@ sub decode_map()
 {
     # The key is the prefix, the value is the decode sub
     {
-	3 => [ 0, 0 ],
-	4 => [ 0, 1 ],
+	3 => 0,
+	4 => 1,
     }
 }
 

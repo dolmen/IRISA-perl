@@ -12,21 +12,15 @@ use Carp qw /croak carp/;
 # Implicit use strict for importer
 #$^H |= strict::bits(qw(refs subs vars));
 
-our @EXPORT = qw/Class Message MessageReq Int/;
-our @EXPORT_OK = qw/Class Message MessageReq Int/;
 
 
-my @types = qw/Int Bool Date String Buffer Real Char IntTable BufferTable ArgTable/;
-my %types;
-{
-    foreach (@types) {
-        my $t = "IRISA::Arg::$_";
-        $types{$_} = $t;
-        $types{uc($_)} = $t;
-    }
-}
+our @types = qw/Int Bool Date String Buffer Real Char IntTable BufferTable ArgTable/;
+my %types = map { my $t = "IRISA::Arg::$_"; ( $_ => $t, uc($_) => $t) } @types;
 
-sub _Messages_import;
+our @EXPORT = (qw/Class Command/, @types);
+our @EXPORT_OK = (qw/Class Command/, @types);
+
+sub _Interface_import;
 
 sub import
 {
@@ -41,15 +35,16 @@ sub import
 	{
 		no strict 'refs';
 		print "# ".__PACKAGE__."->import: $pkg\n";
-		@{$pkg.'::@ISA'} = @isa;
-		*{$pkg.'::import'} = \&_Messages_import;
-		*{$pkg.'::AUTOLOAD'} = \&_autoload;
+		@{$pkg.'::ISA'} = @isa;
+		*{$pkg.'::import'} = \&_Interface_import;
+		*{$pkg.'::AUTOLOAD'} = \&_Interface_AUTOLOAD;
 
 		${$pkg.'::name'} = $pkg;
 		${$pkg.'::id'} = 0;
 		${$pkg.'::last_arg_id'} = 0;
 		${$pkg.'::last_msg_id'} = 0;
-		%{$pkg.'::messages'} = ();
+		%{$pkg.'::args'} = ();
+		%{$pkg.'::commands'} = ();
 	}
 
     unless (@imports) { # Default import
@@ -67,8 +62,17 @@ sub import
 	{
 		no strict 'refs';
 		foreach my $sym (@imports) {
-			print "# import $sym\n";
-			*{$pkg.'::'.$sym} = \&{$exporter.'::'.$sym};
+			if (exists $types{$sym}) {
+				print "# import type $sym\n";
+				# Creates a closure
+				my $type = $sym;
+				*{$pkg.'::'.$sym} = sub(*@) {
+					__PACKAGE__->_arg($type, @_);
+				};
+			} else {
+				print "# import $sym\n";
+				*{$pkg.'::'.$sym} = \&{$exporter.'::'.$sym};
+			}
 		}
 	}
 }
@@ -76,13 +80,17 @@ sub import
 
 sub _caller
 {
-	my @caller = caller(0);
-	my $call_level = 1;
-	@caller = caller(++$call_level) while $caller[0] eq __PACKAGE__;
+	my $pkg = caller(0);
+	my $call_level = 0;
+	while ($pkg eq __PACKAGE__) {
+		#print "_caller: $pkg ".__PACKAGE__. "\n";
+		$pkg = caller(++$call_level);
+	}
+	#print "_caller: $pkg ".__PACKAGE__. "\n";
 	if (wantarray) {
-		return @caller;
+		return caller($call_level);
 	} else {
-		return $caller[0];
+		return $pkg;
 	}
 }
 
@@ -132,52 +140,70 @@ sub Class(*$)
 	_last_msg_id($pkg, $id);
 }
 
-sub Int(*@)
+sub _Int(*@)
 {
 	my $pkg = _caller;
 	my $name = shift;
 	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_arg_id($pkg));
-	IRISA::Interface->arg($pkg, $name, 'Int', $id);
 	print "$name => $id\n";
+	IRISA::Interface->arg($pkg, $name, 'Int', $id);
 	_last_arg_id($pkg, $id);
+}
+
+sub _arg
+{
+	my $pkg = _caller;
+	my $class = shift;
+	my $type = shift;
+	my $name = shift;
+	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_arg_id($pkg));
+	_last_arg_id($pkg, $id);
+	print "# $type ${pkg}::$name => $id\n";
+	my $info = [ $name, $id, $type ];
+	{
+		no strict 'refs';
+		${$pkg.'::args'}{$name} = $info;
+	}
 }
 
 
 
 
 
-sub _message
+sub _command
 {
 	my $pkg = _caller;
 	my $name = shift;
 	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_msg_id($pkg));
 	_last_msg_id($pkg, $id);
-	my $var = $pkg.'::messages';
-	IRISA::Interface->message($pkg, $name, $id);
-	no strict 'refs';
-	${$var}->{$name} = [ @_ ];
-	return ;
+	print "# Command $name => $id\n";
+	#IRISA::Interface->message($pkg, $name, $id);
+	{
+		no strict 'refs';
+		${$pkg.'::commands'}{$name} = [ $name, $id ];
+	}
+	#my $var = $pkg.'::commands';
+	#${$var}->{$name} = [ @_ ];
 }
 
-sub MessageReq(*@)
+sub CommandReq(*@)
 {
 	my $name = shift;
-	_message($name, @_);
+	_command($name, @_);
 }
 
-sub MessageRsp(*@)
+sub CommandCmplt(*@)
 {
 	my $name = shift;
-	_message($name.'Cmplt', @_);
+	_command($name.'Cmplt', @_);
 }
 
-sub Message(*@)
+sub Command(*@)
 {
 	my $name = shift;
 	my @args = @_;
-	print "Message $name @args\n";
-	_message($name, @args);
-	_message($name.'Cmplt', @args);
+	_command($name, @args);
+	#_command($name.'Cmplt', @args);
 }
 
 sub _message_encode
@@ -202,20 +228,19 @@ sub _message_method
 
 
 # import() of the interface package
-sub _Messages_import
+sub _Interface_import
 {
 	my $pkg = shift;
-	#my $sub = 
 	print "# ${pkg}->import\n";
 }
 
 # AUTOLOAD sub that is exported to the caller
 # to enable an encode/decode sub for each message
-sub _autoload
+sub _Interface_AUTOLOAD
 {
 	no strict 'vars';
 	my $sub = $AUTOLOAD;
-	my ($pkg, $msg) = $sub =~ m/^.*::[^:]*$/;
+	my ($pkg, $msg) = $sub =~ m/^(.*)::([^:]*)$/;
 	print "# ${pkg}->AUTOLOAD\n";
 	*$sub = \&_message_method;
 	goto &$sub;

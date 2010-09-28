@@ -1,6 +1,8 @@
 use strict;
 package IRISA::Arg::Int;
 
+our @ISA = ('IRISA::Arg');
+
 sub encode($)
 {
     my $i = shift;

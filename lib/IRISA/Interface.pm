@@ -7,6 +7,8 @@ package IRISA::Interface;
 use Carp qw/croak carp/;
 use Scalar::Util;
 
+
+
 my %arg_registry = ('' => {});
 my %msg_registry;
 
@@ -75,6 +77,23 @@ sub arg_info
 sub message
 {
     
+}
+
+sub args_encode
+{
+    my $class = shift;
+    my %args = @_;
+}
+
+sub message_encode
+{
+    my $class = shift;
+    my $message = shift;
+    my %args = @_;
+}
+
+sub message_decode
+{
 }
 
 1;

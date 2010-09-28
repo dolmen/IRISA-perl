@@ -2,6 +2,9 @@ use strict;
 
 package IRISA::Arg;
 
+
+
+
 sub encode
 {
     my ($id, $type, @value) = (@_);
@@ -13,7 +16,8 @@ sub encode
     pack('Cn', $prefix, $id).$data;
 }
 
-# Returns ($id, $length, $value)
+# Params: ($raw_data)
+# Returns: ($id, $length, $value)
 sub decode
 {
     my ($d, $type) = (@_); # TODO extract the type from the Arg registry
@@ -31,6 +35,8 @@ sub decode
         return ($id, 0, $dec);
     } elsif (ref($dec) eq 'CODE') {
         return ($id, $dec->($data));
+    } else {
+        die "$type: Unexpected value in decode_map for prefix $prefix";
     }
 }
 
