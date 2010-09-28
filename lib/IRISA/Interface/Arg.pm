@@ -1,6 +1,7 @@
 package IRISA::Interface::Arg;
 
 use Moose;
+use File::Spec;
 
 has name => (
     is => 'ro',
@@ -40,12 +41,19 @@ sub encode
 {
     my ($self, @value) = (@_);
     my ($type, $id) = ($self->type, $self->id);
-    eval "require $type";
+    _load_type($type);
     my ($prefix, $data) = do {
         no strict 'refs';
         &{$type.'::encode'}(@value)
     };
     pack('Cn', $prefix, $id).$data;
+}
+
+sub _load_type
+{
+    my $type = shift;
+    no strict 'refs';
+    defined(*{$type.'::encode'}) or eval "require $type";
 }
 
 # Params: ($raw_data)
@@ -54,6 +62,7 @@ sub decode
 {
     my ($self, $d) = @_;
     my ($prefix, $id, $data) = unpack('Cna*', $d);
+    _load_type($self->type);
     my $map = do {
         no strict 'refs';
         &{$self->type.'::decode_map'}()
@@ -64,9 +73,9 @@ sub decode
     my $length;
     my $dec = $map->{$prefix};
     if (ref($dec) eq '') {
-        return ($id, 0, $dec);
+        return (3, $dec);
     } elsif (ref($dec) eq 'CODE') {
-        return ($id, $dec->($data));
+        return ($dec->($data));
     } else {
         die($self->type . ": Unexpected value in decode_map for prefix $prefix");
     }

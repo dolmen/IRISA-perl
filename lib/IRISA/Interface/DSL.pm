@@ -64,8 +64,9 @@ sub import
 		foreach my $sym (@imports) {
 			if (exists $types{$sym}) {
 				print "# import type $sym\n";
-				# Creates a closure
 				my $type = $sym;
+				$type = "IRISA::Arg::$type";
+				# Creates a closure
 				*{$pkg.'::'.$sym} = sub(*@) {
 					__PACKAGE__->_arg($type, @_);
 				};
@@ -176,7 +177,7 @@ sub _command
 	my $name = shift;
 	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_msg_id($pkg));
 	_last_msg_id($pkg, $id);
-	print "# Command $name => $id\n";
+	print "# Command ${pkg}::$name => $id\n";
 	#IRISA::Interface->message($pkg, $name, $id);
 	{
 		no strict 'refs';

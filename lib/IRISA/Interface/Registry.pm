@@ -39,9 +39,10 @@ sub new
 
 sub DESTROY
 {
-    my $self = shift;
-    delete $args_of{$$self};
-    delete $commands_of{$$self};
+    my $self = shift; my $self_id = ${$self};
+    delete $name_of{$self_id};
+    delete $args_of{$self_id};
+    delete $commands_of{$self_id};
 }
 
 sub default
@@ -52,6 +53,14 @@ sub default
 sub name
 {
     return $name_of{ ${ $_[0] } };
+}
+
+sub clear
+{
+    my $self = shift; my $self_id = $$self;
+    $args_of{$self_id} = {};
+    $commands_of{$self_id} = {};
+    $self
 }
 
 sub add_arg
