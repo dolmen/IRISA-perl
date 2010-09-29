@@ -5,6 +5,7 @@ our @ISA = ('IRISA::Arg');
 
 sub encode($)
 {
+    my $self = shift;
     my $i = shift;
     if ($i == 0) {
 	return (5, '');
@@ -17,14 +18,16 @@ sub encode($)
     }
 }
 
-sub decode_map()
 {
+    my $decode_map =
     {
-	0 => sub($) { (4, unpack('C', shift)) },
+	0 => sub($) { (1, unpack('C', shift)) },
 	1 => sub($) { (2, unpack('n', shift)) },
-	2 => sub($) { (1, unpack('N', shift)) },
+	2 => sub($) { (4, unpack('N', shift)) },
 	5 => 0,
-    }
+    };
+
+    sub decode_map() { $decode_map }
 }
 
 1;
