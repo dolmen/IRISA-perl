@@ -247,6 +247,45 @@ sub _Interface_AUTOLOAD
 	goto &$sub;
 }
 
+1;
 
+=head1 NAME
 
-1; # vim:set ts=4 sw=4 sts=4:
+IRISA::Interface::DSL - A DSL to ease IRISA interfaces definitions
+
+=head1 SYNOPSIS
+
+    package MyInterface;
+    
+    Class ITF => 0x8300;
+    
+    Int RetCode;
+    String Param1 => 1;
+    
+    Command
+    
+
+The semantics of the keywords is the IRISA framework semantic.
+
+Commands and Args have separate namespaces, so you can use the same name
+for a Command and an Arg.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+L<irisa-h2pl>: a command-line tool that will parse a C include file and generate
+a Perl module that use IRISA::Interface::DSL.
+
+=item *
+
+L<IRISA::Interface::Registry>: an interface is used in the context of a Registry.
+
+=head1 AUTHOR
+
+Olivier MenguE<eacute> C<<<dolmen@cpan.org>>>
+
+=cut
+# vim:set ts=4 sw=4 sts=4:
