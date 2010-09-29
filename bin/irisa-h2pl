@@ -1,0 +1,126 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use File::Spec;
+
+if (! @ARGV) {
+    print STDERR "usage: $0 <file.h>\n";
+    exit 1;
+}
+
+my $file = $ARGV[0];
+
+if (! -r "$file" && $file =~ /^(\w{3})(?:\.h)?$/) {
+    $file = File::Spec->catfile($ENV{EMDIR}, 'head', "$1.h");
+}
+
+open my $f, '<', $file or die;
+
+
+my $class = '';
+my ($class_id, $class_name);
+my $res = '';
+my ($res_id, $res_type);
+my @last = (undef);
+my $in_comment = 0;
+
+while (<$f>) {
+
+    # Skip the line while we are in a comment
+    if ($in_comment && ! s{^(?:[^*]*|\*[^/])*\*/}{}) {
+        next;
+    } else {
+        $in_comment = 0;
+    }
+
+    # Skip local comments
+    s{/\*(?:[^*]*|\*[^/])*\*/}{}g;
+    s{//.*$}{};
+
+    # A comment is starting on this line:
+    # - we delete the comment
+    # - the in_comment flag is enabled
+    $in_comment = 1 if s{/\*.*$}{};
+
+
+    if (/^#define\s+(?!${class}(?:Res|Cmd))(\w+)Class\s+(\S+)/) {
+        $class = $1;
+        $class_id = $2;
+    } elsif (/^#define\s+${class}ClassName\s+"(\S+)"/) {
+        $class_name = $1;
+        print "\n1;\n" if defined $last[0];
+        print "package IRISA::$class;\nuse IRISA::Interface::DSL;\n\n";
+        print "Class '$class_name' => $class_id;\n";
+        @last = ('Class');
+    } elsif (/^#define\s+${class}Res(\w+)Id\s+\(?\s*${class}Class\s*\+\s*(\d+)/) {
+        $res = $1;
+        $res_id = $2;
+    } elsif (/^#define\s+${class}Res${res}Type\s+DRI_(\w+)/) {
+        $res_type = $1;
+        $res_type =~ s/_?([A-Z]+)/\u\L$1/g;
+        if ($last[0] ne 'Res') {
+            print "\n# Resources\n";
+        } elsif ($res_id != $last[1]+1) {
+            print "\n";
+        }
+        print "$res_type $res => $res_id;\n";
+        @last = ('Res', $res_id);
+    } elsif (/^#define\s+${class}Cmd(\w+?)(?!Cmplt)\s+\(?\s*${class}Class\s*\+\s*(\d+)/) {
+        my $cmd = $1;
+        my $cmd_id = $2;
+        if ($last[0] ne 'Cmd') {
+            print "\n# Commands\n";
+        } elsif ($cmd_id != $last[1]+1) {
+            print "\n";
+        }
+        print "Command $cmd => $cmd_id;\n";
+        @last = ('Cmd', $cmd_id);
+    }
+}
+
+close $f;
+
+print "\n1;\n" if defined $last[0];
+
+__END__
+
+=head1 NAME
+
+irisa-h2pl - Converts an IRISA DRI interface definition from C to Perl
+
+=head1 SYNOPSIS
+
+    irisa-h2pl brk
+    irisa-h2pl log
+    irisa-h2pl myinterface.h
+
+=head1 DESCRIPTION
+
+The input argument can be :
+
+=over 4
+
+=item *
+
+A C header file (.h) that contains one IRISA interface definition.
+
+=item *
+
+A 3 lowercase letter word that is the name of one of the standard IRISA interfaces.
+The file F<$ENV{EMDIR}/head/${name}.h> will be used as the input.
+
+=back
+
+The Perl module source on output will use the IRISA::Interface::DSL module.
+
+=head1 SEE ALSO
+
+L<IRISA::Interface::DSL>
+
+=head1 AUTHOR
+
+Olivier MenguE<eacute> C<<<dolmen@cpan.org>>>
+
+=cut
+# vim:set et ts=4 sw=4 sts=4 :
