@@ -65,8 +65,7 @@ sub clear
 
 sub add_arg
 {
-    my $self = shift; my $self_id = $$self;
-    my ($intf, $name, $id, $type) = @_;
+    my ($self, $intf, $name, $id, $type) = @_;
     my $arg = IRISA::Interface::Arg->new(
         name => $name,
         interface => $intf,
@@ -74,34 +73,59 @@ sub add_arg
         type => $type,
         registry => $self,
     );
-    $args_of{$self_id}{$name} = $arg;
-    $args_of{$self_id}{$id} = $arg;
-    $self
-}
-
-sub arg
-{
-    my ($self, $id_or_name) = @_;
     my $args = $args_of{$$self};
-    die "Unknown arg $id_or_name" unless exists $args->{$id_or_name};
-    return $args->{$id_or_name}
+    $args->{"${intf}::$name"} = $arg;
+    $args->{$id} = $arg;
+    # Try to add the short name, only if there is no conflict
+    if (exists $args->{$name}) {
+        # Conflict: short name is disabled
+        delete $args->{$name};
+    } else {
+        # Add the short name until a conflict occur
+        $args->{$name} = $arg;
+    }
+    $self
 }
 
 sub add_command
 {
-    my $self = shift; my $self_id = $$self;
-    my $intf = shift;
-    my $name = shift;
-    my $id = shift;
-    my $command = IRISA::Interface::Command->new(
+    my ($self, $intf, $name, $id) = @_;
+    my $cmd = IRISA::Interface::Command->new(
         name => $name,
         interface => $intf,
         id => $id,
         registry => $self,
     );
-    $commands_of{$self_id}{$name} = $command;
-    $commands_of{$self_id}{$id} = $command;
+    my $commands = $commands_of{$$self};
+    $commands->{"${intf}::$name"} = $cmd;
+    warn "${intf}::$name conflicts with ".$commands->{$id}->long_name if exists $commands->{$id};
+    $commands->{$id} = $cmd;
+    # Try to add the short name, only if there is no conflict
+    if (exists $commands->{$name}) {
+        # Conflict: short name is disabled
+        delete $commands->{$name};
+    } else {
+        # Add the short name until a conflict occur
+        $commands->{$name} = $cmd;
+    }
+    # Short interface name for standard interfaces
+    if ($intf =~ /^IRISA::Interface::([a-z]{3})$/) {
+        $commands->{"$1::$name"} = $cmd;
+    }
     $self
+}
+
+sub arg
+{
+    my $self = shift;
+    my $id_or_name = shift;
+    my $args = $args_of{$$self};
+    return $args->{$id_or_name} if exists $args->{$id_or_name};
+    if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
+        $id_or_name = $_[0] . '::' . $id_or_name;
+        return $args->{$id_or_name} if exists $args->{$id_or_name};
+    }
+    die "Unknown arg $id_or_name"
 }
 
 sub command
@@ -109,8 +133,12 @@ sub command
     my $self = shift;
     my $id_or_name = shift;
     my $commands = $commands_of{$$self};
-    die "Unknown arg $id_or_name" unless exists $commands->{$id_or_name};
-    $commands->{$id_or_name}
+    return $commands->{$id_or_name} if exists $commands->{$id_or_name};
+    if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
+        $id_or_name = $_[0] . '::' . $id_or_name;
+        return $commands->{$id_or_name} if exists $commands->{$id_or_name};
+    }
+    die "Unknown command $id_or_name"
 }
 
 sub add

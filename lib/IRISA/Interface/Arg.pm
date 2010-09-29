@@ -42,11 +42,8 @@ sub encode
     my ($self, @value) = (@_);
     my ($type, $id) = ($self->type, $self->id);
     _load_type($type);
-    my ($prefix, $data) = do {
-        no strict 'refs';
-        &{$type.'::encode'}(@value)
-    };
-    pack('Cn', $prefix, $id).$data;
+    my ($prefix, $data) = $self->type->encode(@value);
+    pack('Cna*', $prefix, $id, $data);
 }
 
 sub _load_type
@@ -63,10 +60,7 @@ sub decode
     my ($self, $d) = @_;
     my ($prefix, $id, $data) = unpack('Cna*', $d);
     _load_type($self->type);
-    my $map = do {
-        no strict 'refs';
-        &{$self->type.'::decode_map'}()
-    };
+    my $map = $self->type->decode_map();
     if (! exists $map->{$prefix}) {
         die "Invalid data: prefix does not match expected type";
     }
@@ -75,7 +69,8 @@ sub decode
     if (ref($dec) eq '') {
         return (3, $dec);
     } elsif (ref($dec) eq 'CODE') {
-        return ($dec->($data));
+        my @ret = $dec->($data);
+        (3+$ret[0], @ret[1..$#ret])
     } else {
         die($self->type . ": Unexpected value in decode_map for prefix $prefix");
     }
