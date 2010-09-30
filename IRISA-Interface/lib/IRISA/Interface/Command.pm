@@ -28,6 +28,13 @@ has registry => (
     weak_ref => 1,
 );
 
+has long_name => (
+    is => 'ro',
+    init_arg => undef,
+    lazy => 1,
+    default => sub { my $self = shift; $self->interface . '::' . $self->name },
+);
+
 no Moose;
 __PACKAGE__->meta->make_immutable;
 
@@ -35,6 +42,7 @@ sub encode
 {
     my $self = shift;
     my $registry = $self->registry;
+    my $intf = $self->interface;
     my $args;
     if (@_ == 1 && ref($_[0]) eq 'ARRAY') {
         $args = shift;
@@ -46,7 +54,7 @@ sub encode
     my $i = 0;
     while ($i < $#{$args}) {
         my ($k, $v) = @{$args}[$i..$i+1];
-        push @payload, $registry->arg($k)->encode($v);
+        push @payload, $registry->arg($k, $intf)->encode($v);
         $i += 2;
     }
     my $payload = join('', @payload);
