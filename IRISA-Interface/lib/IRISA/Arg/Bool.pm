@@ -1,18 +1,19 @@
 use strict;
 package IRISA::Arg::Bool;
 
-sub encode($)
+sub encode
 {
-    return (3 + ! ! $_[0], '');
+    return (3 + ! ! $_[1], '');
 }
 
-sub decode_map()
 {
     # The key is the prefix, the value is the decode sub
-    {
-	3 => 0,
-	4 => 1,
-    }
+    my $decode_map = {
+        3 => 0,
+        4 => 1,
+    };
+
+    sub decode_map() { $decode_map }
 }
 
-1;
+1; # vim: set et sw=4 sts=4 :
