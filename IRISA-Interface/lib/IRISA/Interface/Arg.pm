@@ -42,7 +42,7 @@ sub encode
     my ($self, @value) = (@_);
     my ($type, $id) = ($self->type, $self->id);
     _load_type($type);
-    my ($prefix, $data) = $self->type->encode(@value);
+    my ($prefix, $data) = $type->encode(@value);
     pack('Cna*', $prefix, $id, $data);
 }
 
@@ -50,7 +50,11 @@ sub _load_type
 {
     my $type = shift;
     no strict 'refs';
-    defined(*{$type.'::encode'}) or eval "require $type";
+    print "# $type\n";
+    return if defined *{$type.'::encode'};
+    local $@;
+    eval "require $type";
+    die $@ if $@;
 }
 
 # Params: ($raw_data)
