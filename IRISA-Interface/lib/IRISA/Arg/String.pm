@@ -3,24 +3,31 @@ package IRISA::Arg::String;
 
 # A string, using the native encoding of the platform
 
-sub encode($)
+sub encode
 {
-    my $s = shift;
+    my ($self, $s) = @_;
     my $l = length($s);
-    if ($l == 0)
-	return (10, '');
-    (6, pack('na*', $l, ))
+    return (10, '') if $l == 0;
+    return (6, pack('Ca*', $l, $s)) if $l <= 0xff;
+    return (12, pack('na*', $l, $s)) if $l <= 0xff;
 }
 
-sub decode_map()
 {
-    {
-	6  => sub($) {
-	    my $l = ord($_[0]);
-	    return (1+$l, substr($_[0], 1, $l));
-	},
-	10 => '',
-    }
+    my $decode_map = {
+        6  => sub($) {
+            #my $l = ord($_[0]);
+            #return (1+$l, substr($_[0], 1, $l));
+            unpack('C/a*', $_[0]);
+        },
+        10 => '',
+        12 => sub($) {
+            #my $l = unpack('n', $_[0]);
+            #return (2+$l, substr($_[0], 2, $l));
+            unpack('n/a*', $_[0]);
+        }
+    };
+
+    sub decode_map() { $decode_map }
 }
 
-1;
+1;  # vim: set et sw=4 sts=4 :
