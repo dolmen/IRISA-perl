@@ -141,24 +141,14 @@ sub Class(*$)
 	_last_msg_id($pkg, $id);
 }
 
-sub _Int(*@)
-{
-	my $pkg = _caller;
-	my $name = shift;
-	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_arg_id($pkg));
-	print "$name => $id\n";
-	IRISA::Interface->arg($pkg, $name, 'Int', $id);
-	_last_arg_id($pkg, $id);
-}
-
 sub _arg
 {
 	my $pkg = _caller;
 	my $class = shift;
 	my $type = shift;
 	my $name = shift;
-	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_arg_id($pkg));
-	_last_arg_id($pkg, $id);
+	my $id = @_ ? (_base_id($pkg)+$_[0]) : (_last_arg_id($pkg));
+	_last_arg_id($pkg, 1+$id);
 	print "# $type ${pkg}::$name => $id\n";
 	my $info = [ $name, $id, $type ];
 	{
@@ -175,16 +165,13 @@ sub _command
 {
 	my $pkg = _caller;
 	my $name = shift;
-	my $id = @_ ? (_base_id($pkg)+$_[0]) : (1+_last_msg_id($pkg));
-	_last_msg_id($pkg, $id);
+	my $id = @_ ? (_base_id($pkg)+$_[0]) : (_last_msg_id($pkg));
+	_last_msg_id($pkg, $id+1);
 	print "# Command ${pkg}::$name => $id\n";
-	#IRISA::Interface->message($pkg, $name, $id);
 	{
 		no strict 'refs';
 		${$pkg.'::commands'}{$name} = [ $name, $id ];
 	}
-	#my $var = $pkg.'::commands';
-	#${$var}->{$name} = [ @_ ];
 }
 
 sub CommandReq(*@)
