@@ -15,10 +15,13 @@ sub encode
 {
     my $decode_map = {
         6  => sub($) {
-            my $l = ord($_[0]);
-            die "Missing data in String arg\n" if length($_[0]) < 1+$l;
-            (1+$l, substr($_[0], 1, $l))
-            #(1+$l, unpack('C/a*', $_[0]));
+            #my $l = ord($_[0]);
+            #die "Missing data in String arg\n" if length($_[0]) < 1+$l;
+            #(1+$l, substr($_[0], 1, $l))
+            #(1+$l, unpack('C/a*', $_[0]))
+            my @res = unpack('C X C/a*', $_[0]);
+            $res[0]++;
+            @res
         },
         10 => '',
         12 => sub($) {
