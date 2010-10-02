@@ -53,7 +53,7 @@ sub _load_type
     my $type = shift;
     no strict 'refs';
     print "# $type\n";
-    return if defined *{$type.'::encode'};
+    return if defined *{'IRISA::Arg::'.$type.'::encode'};
     local $@;
     eval "require $type";
     die $@ if $@;

@@ -15,7 +15,7 @@ my $arg = $reg->arg('RetCode');
 is $arg->name, 'RetCode';
 is $arg->id, 0x8704;
 is $arg->interface, 't::DSL1';
-is $arg->type, 'IRISA::Arg::Int';
+is $arg->type, 'Int';
 
 
 # Convert to hex, then compare

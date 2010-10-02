@@ -65,7 +65,6 @@ sub import
 			if (exists $types{$sym}) {
 				print "# import type $sym\n";
 				my $type = $sym;
-				$type = "IRISA::Arg::$type";
 				# Creates a closure
 				*{$pkg.'::'.$sym} = sub(*@) {
 					__PACKAGE__->_arg($type, @_);
