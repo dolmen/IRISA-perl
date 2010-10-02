@@ -42,7 +42,7 @@ __PACKAGE__->meta->make_immutable;
 sub encode
 {
     my ($self, @value) = (@_);
-    my ($type, $id) = ($self->type, $self->id);
+    my ($type, $id) = ("IRISA::Arg::".$self->type, $self->id);
     _load_type($type);
     my ($prefix, $data) = $type->encode(@value);
     pack('Cna*', $prefix, $id, $data);
@@ -53,7 +53,7 @@ sub _load_type
     my $type = shift;
     no strict 'refs';
     print "# $type\n";
-    return if defined *{'IRISA::Arg::'.$type.'::encode'};
+    return if defined *{$type.'::encode'};
     local $@;
     eval "require $type";
     die $@ if $@;
@@ -67,8 +67,9 @@ sub decode
     my $len = length $d;
     die "Invalid data: expected length > 3" if $len < 3;
     my ($prefix, $id, $data) = unpack('Cna*', $d);
-    _load_type($self->type);
-    my $map = $self->type->decode_map();
+    my $type = "IRISA::Arg::".$self->type;
+    _load_type($type);
+    my $map = $type->decode_map();
     if (! exists $map->{$prefix}) {
         die "Invalid data: prefix does not match expected type";
     }
