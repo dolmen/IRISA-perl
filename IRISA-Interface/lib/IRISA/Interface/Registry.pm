@@ -119,26 +119,30 @@ sub arg
 {
     my $self = shift;
     my $id_or_name = shift;
+    return $id_or_name if ref $id_or_name;
     my $args = $args_of{$$self};
     return $args->{$id_or_name} if exists $args->{$id_or_name};
     if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
         $id_or_name = $_[0] . '::' . $id_or_name;
         return $args->{$id_or_name} if exists $args->{$id_or_name};
     }
-    die "Unknown arg $id_or_name"
+    die sprintf("Unknown arg 0x%x\n", $id_or_name) if $id_or_name =~ /[1-9]/;
+    die "Unknown arg $id_or_name\n"
 }
 
 sub command
 {
     my $self = shift;
     my $id_or_name = shift;
+    return $id_or_name if ref $id_or_name;
     my $commands = $commands_of{$$self};
     return $commands->{$id_or_name} if exists $commands->{$id_or_name};
     if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
         $id_or_name = $_[0] . '::' . $id_or_name;
         return $commands->{$id_or_name} if exists $commands->{$id_or_name};
     }
-    die "Unknown command $id_or_name"
+    die sprintf("Unknown command 0x%x\n", $id_or_name) if $id_or_name =~ /[1-9]/;
+    die "Unknown command $id_or_name\n"
 }
 
 sub add
@@ -169,6 +173,7 @@ sub add
     $self
 }
 
+
 # Perl's module import
 sub import
 {
@@ -182,10 +187,61 @@ sub merge
 {
 }
 
-# Extract
-sub extract_id
+
+
+
+
+sub encode_command
 {
-    unpack('@1 n', $_[1]);
+    my $self = shift;
+    my $cmd = shift;
+    $cmd = $self->command($cmd) if ref($cmd) eq '';
+    my $intf = $cmd->interface;
+    my $args;
+    if (@_ == 1 && ref($_[0]) eq 'ARRAY') {
+        $args = shift;
+    } else {
+        $args = \@_;
+    }
+
+    my @payload;
+    my $i = 0;
+    while ($i < $#{$args}) {
+        my ($k, $v) = @{$args}[$i..$i+1];
+        push @payload, $self->arg($k, $intf)->encode($v);
+        $i += 2;
+    }
+    my $payload = join('', @payload);
+    pack('CCnA*', length($payload), 0x40, $cmd->id, $payload)
 }
+
+
+sub decode_command
+{
+    my $self = shift;
+    my $data = shift;
+
+    local $@;
+    my $len = length $data;
+    die "Invalid message length (< 4)" if $len < 4;
+    my ($l, $sig, $cmd) = unpack('CCn', $data);
+    die sprintf("Inconsistent byte 0 in message (got $l, expected %d)\n", $len-4) if $l != $len-4;
+    warn sprintf("Invalid signature at byte 1 (got 0x%x, expected 0x40)\n", $sig) if $sig != 0x40;
+
+    eval { $cmd = $self->command($cmd) };
+    warn "$@" if $@;
+
+    my $offset = 4;
+    my @args;
+    while ($offset+3 <= $len) {
+        my $arg = $self->arg(unpack('@1n', substr($data, $offset)));
+        my ($sz, $value) = $arg->decode(substr($data, $offset));
+        push @args, $arg, $value;
+        $offset += $sz;
+    }
+
+    ($cmd, @args);
+}
+
 
 1;  # vim: set et sw=4 sts=4 :

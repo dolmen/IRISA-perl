@@ -9,6 +9,8 @@ has name => (
     required => 1,
 );
 
+use overload '""' => sub { $_[0]->name };
+
 has interface => (
     is => 'ro',
     isa => 'Str',
@@ -62,6 +64,8 @@ sub _load_type
 sub decode
 {
     my ($self, $d) = @_;
+    my $len = length $d;
+    die "Invalid data: expected length > 3" if $len < 3;
     my ($prefix, $id, $data) = unpack('Cna*', $d);
     _load_type($self->type);
     my $map = $self->type->decode_map();
