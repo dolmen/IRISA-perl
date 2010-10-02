@@ -48,14 +48,14 @@ is_deeply [ $arg->decode($enc) ], [ length($enc), "Hello" ], "decode String";
 $enc = "\x0d\@\x87\x00\x00\x87\x02\x04\x06\x87\x03\x05Hello";
 my $cmd = $reg->command('Msg1');
 my @params = (Arg2 => 4, Arg3 => 'Hello');
-is_hex $cmd->encode(@params), $enc, 'encode Msg1';
-is_hex $reg->encode_command($cmd, @params), $enc;
-is_hex $reg->encode_command($cmd->id, @params), $enc;
+is_hex $cmd->message(@params), $enc, 'encode Msg1';
+is_hex $reg->encode_message($cmd, @params), $enc;
+is_hex $reg->encode_message($cmd->id, @params), $enc;
 @params = ($reg->arg('Arg2'), 4, $reg->arg('Arg3'), 'Hello');
-is_hex $cmd->encode(@params), $enc, 'encode Msg1';
-is_hex $reg->encode_command($cmd, @params), $enc;
-is_hex $reg->encode_command($cmd->id, @params), $enc;
-is_deeply [ $reg->decode_command($enc) ], [ $cmd, @params ];
+is_hex $cmd->message(@params), $enc, 'encode Msg1';
+is_hex $reg->encode_message($cmd, @params), $enc;
+is_hex $reg->encode_message($cmd->id, @params), $enc;
+is_deeply [ $reg->decode_message($enc) ], [ $cmd, @params ];
 
 #ok $t::DSL1::Arg1
 

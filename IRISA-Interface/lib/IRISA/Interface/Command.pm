@@ -45,10 +45,10 @@ has long_name => (
 no Moose;
 __PACKAGE__->meta->make_immutable;
 
-sub encode
+sub message
 {
     my $self = shift;
-    $self->registry->encode_command($self, @_);
+    $self->registry->encode_message($self, @_);
 }
 
 1; # vim: set et sw=4 sts=4 :

@@ -238,7 +238,7 @@ sub decode_arg
 
 
 
-sub encode_command
+sub encode_message
 {
     my $self = shift;
     my $cmd = shift;
@@ -263,7 +263,7 @@ sub encode_command
 }
 
 
-sub decode_command
+sub decode_message
 {
     my $self = shift;
     my $data = shift;
