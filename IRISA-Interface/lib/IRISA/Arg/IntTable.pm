@@ -12,7 +12,7 @@ sub encode
         0xd => sub($) {
             my $d = shift;
             #my $count = unpack('n', $d);
-            #return (2+4*$count, [ unpack('l>*', substr($d, 2, 4*$count)) ] )
+            #return (2+4*$count, [ unpack('N*', substr($d, 2, 4*$count)) ] )
             my @arr = unpack('n/N*', $d);
             return (2+4*@arr, \@arr);
         },
