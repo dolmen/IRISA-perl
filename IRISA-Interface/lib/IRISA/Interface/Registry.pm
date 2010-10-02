@@ -188,6 +188,53 @@ sub merge
 }
 
 
+sub _load_type
+{
+    my $type = shift;
+    no strict 'refs';
+    print "# $type\n";
+    return if defined *{$type.'::encode'};
+    local $@;
+    eval "require $type";
+    die $@ if $@;
+}
+
+
+sub encode_arg
+{
+    my ($self, $arg, @value) = (@_);
+    my ($type, $id) = ("IRISA::Arg::".$arg->type, $arg->id);
+    _load_type($type);
+    my ($prefix, $data) = $type->encode(@value);
+    pack('Cna*', $prefix, $id, $data);
+}
+
+# Params: ($raw_data)
+# Returns: ($id, $length, $value)
+sub decode_arg
+{
+    my ($self, $arg, $d) = @_;
+    my $len = length $d;
+    die "Invalid data: expected length > 3" if $len < 3;
+    my ($prefix, $id, $data) = unpack('Cna*', $d);
+    my $type = "IRISA::Arg::".$arg->type;
+    _load_type($type);
+    my $map = $type->decode_map();
+    if (! exists $map->{$prefix}) {
+        die "Invalid data: prefix does not match expected type";
+    }
+    my $length;
+    my $dec = $map->{$prefix};
+    if (ref($dec) eq '') {
+        return (3, $dec);
+    } elsif (ref($dec) eq 'CODE') {
+        my @ret = $dec->($data);
+        (3+$ret[0], @ret[1..$#ret])
+    } else {
+        die($self->type . ": Unexpected value in decode_map for prefix $prefix");
+    }
+}
+
 
 
 
@@ -208,7 +255,7 @@ sub encode_command
     my $i = 0;
     while ($i < $#{$args}) {
         my ($k, $v) = @{$args}[$i..$i+1];
-        push @payload, $self->arg($k, $intf)->encode($v);
+        push @payload, $self->encode_arg($self->arg($k, $intf), $v);
         $i += 2;
     }
     my $payload = join('', @payload);
@@ -235,7 +282,7 @@ sub decode_command
     my @args;
     while ($offset+3 <= $len) {
         my $arg = $self->arg(unpack('@1n', substr($data, $offset)));
-        my ($sz, $value) = $arg->decode(substr($data, $offset));
+        my ($sz, $value) = $self->decode_arg($arg, substr($data, $offset));
         push @args, $arg, $value;
         $offset += $sz;
     }
