@@ -85,9 +85,4 @@ sub decode
     }
 }
 
-sub extract_id
-{
-    unpack('@1 n', $_[1])
-}
-
 1;  # vim: set et ts=4 sw=4 sts=4 :
