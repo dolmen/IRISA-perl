@@ -202,7 +202,7 @@ sub _load_type
 
 sub encode_arg
 {
-    my ($self, $arg, @value) = (@_);
+    my ($registry, $arg, @value) = (@_);
     my ($type, $id) = ("IRISA::Arg::".$arg->type, $arg->id);
     _load_type($type);
     my ($prefix, $data) = $type->encode(@value);
@@ -213,7 +213,7 @@ sub encode_arg
 # Returns: ($id, $length, $value)
 sub decode_arg
 {
-    my ($self, $arg, $d) = @_;
+    my ($registry, $arg, $d) = @_;
     my $len = length $d;
     die "Invalid data: expected length > 3" if $len < 3;
     my ($prefix, $id, $data) = unpack('Cna*', $d);
@@ -231,7 +231,7 @@ sub decode_arg
         my @ret = $dec->($data);
         (3+$ret[0], @ret[1..$#ret])
     } else {
-        die($self->type . ": Unexpected value in decode_map for prefix $prefix");
+        die("$type: Unexpected value in decode_map for prefix $prefix");
     }
 }
 
@@ -242,7 +242,8 @@ sub encode_message
 {
     my $self = shift;
     my $cmd = shift;
-    $cmd = $self->command($cmd) if ref($cmd) eq '';
+    my $registry = $self;
+    $cmd = $registry->command($cmd) if ref($cmd) eq '';
     my $intf = $cmd->interface;
     my $args;
     if (@_ == 1 && ref($_[0]) eq 'ARRAY') {
@@ -255,7 +256,7 @@ sub encode_message
     my $i = 0;
     while ($i < $#{$args}) {
         my ($k, $v) = @{$args}[$i..$i+1];
-        push @payload, $self->encode_arg($self->arg($k, $intf), $v);
+        push @payload, $registry->encode_arg($registry->arg($k, $intf), $v);
         $i += 2;
     }
     my $payload = join('', @payload);
@@ -267,6 +268,7 @@ sub decode_message
 {
     my $self = shift;
     my $data = shift;
+    my $registry = $self;
 
     local $@;
     my $len = length $data;
@@ -275,14 +277,14 @@ sub decode_message
     die sprintf("Inconsistent byte 0 in message (got $l, expected %d)\n", $len-4) if $l != $len-4;
     warn sprintf("Invalid signature at byte 1 (got 0x%x, expected 0x40)\n", $sig) if $sig != 0x40;
 
-    eval { $cmd = $self->command($cmd) };
+    eval { $cmd = $registry->command($cmd) };
     warn "$@" if $@;
 
     my $offset = 4;
     my @args;
     while ($offset+3 <= $len) {
-        my $arg = $self->arg(unpack('@1n', substr($data, $offset)));
-        my ($sz, $value) = $self->decode_arg($arg, substr($data, $offset));
+        my $arg = $registry->arg(unpack('@1n', substr($data, $offset)));
+        my ($sz, $value) = $registry->decode_arg($arg, substr($data, $offset));
         push @args, $arg, $value;
         $offset += $sz;
     }
