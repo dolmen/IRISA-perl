@@ -119,9 +119,15 @@ sub arg
 {
     my $self = shift;
     my $id_or_name = shift;
-    return $id_or_name if ref $id_or_name;
     my $args = $args_of{$$self};
+
+    if (ref $id_or_name) {
+        return $id_or_name if exists $args->{$id_or_name->id};
+        die "Invalid object arg $id_or_name\n"
+    }
+
     return $args->{$id_or_name} if exists $args->{$id_or_name};
+
     if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
         $id_or_name = $_[0] . '::' . $id_or_name;
         return $args->{$id_or_name} if exists $args->{$id_or_name};
@@ -134,9 +140,15 @@ sub command
 {
     my $self = shift;
     my $id_or_name = shift;
-    return $id_or_name if ref $id_or_name;
     my $commands = $commands_of{$$self};
+
+    if (ref $id_or_name) {
+        return $id_or_name if exists $commands->{$id_or_name->id};
+        die "Invalid object command $id_or_name\n"
+    }
+
     return $commands->{$id_or_name} if exists $commands->{$id_or_name};
+
     if (@_ && $id_or_name =~ /[A-za-z]\w+/) {
         $id_or_name = $_[0] . '::' . $id_or_name;
         return $commands->{$id_or_name} if exists $commands->{$id_or_name};
