@@ -11,22 +11,31 @@ sub encode
     # TODO query the Args registry
 
     my @payload;
-    my $len = 0;
     foreach my $arg (@{$args}) {
         my (undef, $data) = IRISA::Arg::Args->encode($arg, $registry);
-        my $len = length $data;
-        push @payload, $len, $data;
+        push @payload, $data;
     }
 
-    (0x10, pack('n(N/A*)*', 0+@{$args}, @payload));
+    (0x10, pack('n/(N/a*)*', @payload));
 }
 
 {
     my $decode_map = {
         0x10 => sub($$) {
             my ($d, $registry) = @_;
-            my $count = unpack('n', $d);
             my $arg_decode = IRISA::Arg::Args->decode_map()->{15};
+            my @payload = unpack('n/(N/a*)*', $d);
+            my $len = 2;
+            @payload = map {
+                $len += 4 + length($_);
+                print "# ", unpack('H*', $_), "\n";
+                my (undef, $arg) = $arg_decode->($_, $registry);
+                $arg
+            } @payload;
+
+=begin comment
+
+            my $count = unpack('n', $d);
             my $len = 2;
             my @payload;
             while ($count--) {
@@ -36,6 +45,11 @@ sub encode
                 push @payload, $arg;
                 $len += $len2;
             }
+
+=end comment
+
+=cut
+
             ($len, \@payload);
         }
     };
