@@ -9,6 +9,8 @@ String Arg3;
 
 Int RetCode;
 
+ArgTable TArg;
+
 Command Msg1;
 Command 'Msg2';
 
