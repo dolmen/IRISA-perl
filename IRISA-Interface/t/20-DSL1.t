@@ -1,6 +1,6 @@
 #!perl
 
-use Test::More tests => 21;
+use Test::More tests => 23;
 use Test::NoWarnings;
 
 use IRISA::Interface::Registry qw/t::DSL1/;
@@ -29,21 +29,28 @@ my $enc;
 
 $enc = "\x00\x87\x04\x03";
 #is $arg->encode(3), $enc;
-is_hex $arg->encode(3), $enc;
-is_deeply [ $arg->decode($enc) ], [ length($enc), 3 ];
+is_hex $arg->encode(3), $enc, "encode char";
+is_deeply [ $reg->decode_arg($enc) ], [ length($enc), $arg, 3 ], "decode char";
 
 $enc = "\x01\x87\x04\x03\x05";
 is_hex $arg->encode(0x0305), $enc, "encode short";
-is_deeply [ $arg->decode($enc) ], [ length($enc), 0x0305 ], "decode short";
+is_deeply [ $reg->decode_arg($enc) ], [ length($enc), $arg, 0x0305 ], "decode short";
 
 $enc = "\x05\x87\x04";
 is_hex $arg->encode(0), $enc, "encode Int 0";
-is_deeply [ $arg->decode($enc) ], [ length($enc), 0 ], "decode Int 0";
+is_deeply [ $reg->decode_arg($enc) ], [ length($enc), $arg, 0 ], "decode Int 0";
 
 $enc = "\x06\x87\x03\x05Hello";
 $arg = $reg->arg(0x8703);
 is_hex $arg->encode("Hello"), $enc, "encode String";
-is_deeply [ $arg->decode($enc) ], [ length($enc), "Hello" ], "decode String";
+is_deeply [ $reg->decode_arg($enc) ], [ length($enc), $arg, "Hello" ], "decode String";
+
+
+$enc = "\x10\x87\x05\x00\x02\x00\x00\x00\x09\x00\x87\x01\x08\x06\x87\x03\x01H\x00\x00\x00\x00";
+my $v = [ [ Arg1 => 8, Arg3 => 'H' ], [] ];
+$arg = $reg->arg('TArg');
+is_hex $arg->encode($v), $enc, 'encode ArgTable';
+is_deeply [ $reg->decode_arg($enc) ], [ length($enc), $arg, $v ], "decode ArgTable";
 
 $enc = "\x0d\@\x87\x00\x00\x87\x02\x04\x06\x87\x03\x05Hello";
 my $cmd = $reg->command('Msg1');
