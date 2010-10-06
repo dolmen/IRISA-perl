@@ -214,10 +214,10 @@ sub _load_type
 
 sub encode_arg
 {
-    my ($registry, $arg, @value) = (@_);
+    my ($registry, $arg, $value) = @_;
     my ($type, $id) = ("IRISA::Arg::".$arg->type, $arg->id);
     _load_type($type);
-    my ($prefix, $data) = $type->encode(@value);
+    my ($prefix, $data) = $type->encode($value, $registry);
     pack('Cna*', $prefix, $id, $data);
 }
 
@@ -225,23 +225,26 @@ sub encode_arg
 # Returns: ($id, $length, $value)
 sub decode_arg
 {
-    my ($registry, $arg, $d) = @_;
-    my $len = length $d;
+    my ($registry, $data, @context) = @_;
+    my $len = length($data);
     die "Invalid data: expected length > 3" if $len < 3;
-    my ($prefix, $id, $data) = unpack('Cna*', $d);
+    my ($prefix, $id) = unpack('Cn', $data);
+    # TODO handle unknown arg
+    my $arg = $registry->arg($id, @context);
     my $type = "IRISA::Arg::".$arg->type;
     _load_type($type);
     my $map = $type->decode_map();
     if (! exists $map->{$prefix}) {
-        die "Invalid data: prefix does not match expected type";
+        print "# ", unpack('H*', $data), ' ', $data, "\n";
+        die sprintf('Invalid data: prefix 0x%x does not match type %s for %s', $prefix, $type, $arg->name);
     }
     my $length;
     my $dec = $map->{$prefix};
     if (ref($dec) eq '') {
-        return (3, $dec);
+        return (3, $arg, $dec);
     } elsif (ref($dec) eq 'CODE') {
-        my @ret = $dec->($data);
-        (3+$ret[0], @ret[1..$#ret])
+        my @ret = $dec->(substr($data, 3), $registry);
+        (3+$ret[0], $arg, @ret[1..$#ret])
     } else {
         die("$type: Unexpected value in decode_map for prefix $prefix");
     }
@@ -295,8 +298,8 @@ sub decode_message
     my $offset = 4;
     my @args;
     while ($offset+3 <= $len) {
-        my $arg = $registry->arg(unpack('@1n', substr($data, $offset)));
-        my ($sz, $value) = $registry->decode_arg($arg, substr($data, $offset));
+        #my $arg = $registry->arg(unpack('@1n', substr($data, $offset)));
+        my ($sz, $arg, $value) = $registry->decode_arg(substr($data, $offset), $cmd);
         push @args, $arg, $value;
         $offset += $sz;
     }

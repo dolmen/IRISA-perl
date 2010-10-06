@@ -44,7 +44,8 @@ sub encode {
 }
 
 sub decode {
-    $_[0]->registry->decode_arg(@_);
+    my $self = shift;
+    $self->registry->decode_arg(@_);
 }
 
 1;  # vim: set et ts=4 sw=4 sts=4 :
